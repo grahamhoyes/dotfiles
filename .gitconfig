@@ -1,0 +1,5 @@
+[user]
+	email = accounts@grahamhoyes.com
+	name = Graham Hoyes
+[core]
+	autocrlf = input
