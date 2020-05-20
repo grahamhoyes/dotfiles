@@ -10,6 +10,7 @@ This script is broken into two sections:
 
 import os
 import requests
+from shutil import rmtree
 from subprocess import run
 
 # Make sure we're working from the right place
@@ -29,10 +30,10 @@ def _make_and_chdir(path, purge=False):
 
     If purge is True, then the directory will be deleted and re-created
     """
-    if purge:
-        os.rmdir(path)
+    if purge and os.path.isdir(path):
+        rmtree(path)
 
-    if not os.path.exists(path) and not os.path.isdir(path):
+    if not os.path.isdir(path):
         os.makedirs(path)
     os.chdir(path)
 
@@ -82,6 +83,14 @@ APT_TO_INSTALL = [
     "libkf5newstuff-dev",
     "libxcb-randr0-dev",
     "libx11-xcb-dev",
+    "libkdecorations2-dev",
+]
+
+SNAPS_TO_INSTALL = [
+    "chromium",
+    "slack --classic",
+    "pycharm-professional --classic",
+    "spotify",
 ]
 
 # Add repos necessary for latte-dock
@@ -92,6 +101,17 @@ _call("sudo apt dist-upgrade -y")
 
 # Install apt packages
 _call("sudo apt install -y " + " ".join(APT_TO_INSTALL))
+
+# Install snaps
+for package in SNAPS_TO_INSTALL:
+    _call(f"sudo snap install {package}")
+
+# Link desktop entries for snaps - this is necessary because krunner can't find them for some reason
+with RunAndDone(f"{HOME}/.local/share/applications"):
+    for file in os.listdir("/var/lib/snapd/desktop/applications/"):
+        if not file.endswith(".desktop"):
+            continue
+        _call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
 
 # Install the latest version of oh-my-zsh the recommended way. This also sets the default shell to zsh.
 _call("curl -Lo oh-my-zsh_install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh")
@@ -108,9 +128,6 @@ print("Installing oh-my-zsh plugins...")
 _call(f"git clone https://github.com/zsh-users/zsh-syntax-highlighting.git {HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting")
 _call(f"git clone https://github.com/zsh-users/zsh-autosuggestions {HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions")
 
-# Install chromium from the snap store
-_call("sudo snap install chromium")
-
 # Install miniconda 3
 if not os.path.isdir(f"{HOME}/.miniconda3"):
     print("Installing miniconda3...")
@@ -122,9 +139,9 @@ else:
 
 # Some installers we want to stick around, specifically so we can update and rebuild when things go awry.
 # The `software` folder is in .gitignore and should be kept around
-_make_and_chdir(f"{DOTFILES_DIR}/software")
+_make_and_chdir(f"{DOTFILES_DIR}/software", purge=True)
 
-# Install latte-dock and applets
+# Install latte-dock, applets, and other tweaks
 print("Installing latte-dock...")
 _call("git clone https://github.com/KDE/latte-dock.git")
 with RunAndDone("latte-dock"):
@@ -138,14 +155,27 @@ _call(f"git clone https://github.com/psifidotos/applet-window-buttons.git")
 with RunAndDone("applet-window-buttons"):
     _call("sh install.sh", check=True)
 
-_call(f"git clone https://github.com/psifidotos/applet-window-title")
+_call("git clone https://github.com/psifidotos/applet-window-title")
 with RunAndDone("applet-window-title"):
     _call("plasmapkg2 -i .")
+
+_call("git clone https://github.com/psifidotos/applet-latte-spacer/")
+with RunAndDone("applet-latte-spacer"):
+    _call("plasmapkg2 -i .")
+
+_call("git clone https://github.com/psifidotos/latte-indicator-dashtopanel.git")
+with RunAndDone("latte-indicator-dashtopanel"):
+    _call("kpackagetool5 -i . -t Latte/Indicator")
+
+_call("git clone https://github.com/Zren/plasma-applet-presentwindows.git")
+with RunAndDone("plasma-applet-presentwindows"):
+    _call("kpackagetool5 -i package -t Plasma/Applet")
 
 # === Load and link configurations ===
 TARGET_DIR_TO_DOTFILES = {
     HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
-    f"{HOME}/.local/share/konsole": ["konsole.profile"]
+    f"{HOME}/.local/share/konsole": ["konsole.profile"],
+    f"{HOME}/.config": ["kwinrc"]
 }
 
 for path, dotfiles in TARGET_DIR_TO_DOTFILES.items():
