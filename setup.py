@@ -46,8 +46,8 @@ class RunAndDone:
 
     def __enter__(self):
         self.prev_path = os.getcwd()
-        if not os.path.isdir(path):
-            os.makedirs(path)
+        if not os.path.isdir(self.path):
+            os.makedirs(self.path)
         os.chdir(self.path)
 
     def __exit__(self, *args):
