@@ -273,19 +273,19 @@ def update():
     # Note: I made a typo in "anaconda" when making the branch, fix that :facepalm:
     print("Updating powerlevel10k...")
     with RunAndDone(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
-        sh("git pull origin base_anaconva_env")
+        call("git pull origin base_anaconva_env")
 
     # Update zsh plugins
     print("Updating oh-my-zsh plugins...")
     with RunAndDone(
         f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting", create=False
     ):
-        sh("git pull origin master")
+        call("git pull origin master")
 
     with RunAndDone(
         f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False
     ):
-        sh("git pull origin master")
+        call("git pull origin master")
 
     # Some installers we want to stick around, specifically so we can update and rebuild when things go awry.
     # The `software` folder is in .gitignore and should be kept around
@@ -297,32 +297,31 @@ def update():
         # run install.sh again like below.
 
         with RunAndDone("applet-window-appmenu", create=False):
-            sh("git pull origin master")
+            call("git pull origin master")
             call("sh install.sh", check=True)
 
-        clone("https://github.com/psifidotos/applet-window-buttons.git")
         with RunAndDone("applet-window-buttons", create=False):
-            sh("git pull origin master")
+            call("git pull origin master")
             call("sh install.sh", check=True)
 
-        clone("https://github.com/psifidotos/applet-window-title")
         with RunAndDone("applet-window-title", create=False):
-            sh("git pull origin master")
+            call("git pull origin master")
             call("plasmapkg2 -i .")
 
-        clone("https://github.com/psifidotos/applet-latte-spacer/")
         with RunAndDone("applet-latte-spacer", create=False):
-            sh("git pull origin master")
+            call("git pull origin master")
             call("plasmapkg2 -i .")
 
-        clone("https://github.com/psifidotos/latte-indicator-dashtopanel.git")
         with RunAndDone("latte-indicator-dashtopanel", create=False):
-            sh("git pull origin master")
+            call("git pull origin master")
             call("kpackagetool5 -i . -t Latte/Indicator")
 
-        clone("https://github.com/Zren/plasma-applet-presentwindows.git")
         with RunAndDone("plasma-applet-presentwindows", create=False):
-            sh("git pull origin master")
+            call("git pull origin master")
+            call("kpackagetool5 -i package -t Plasma/Applet")
+
+        with RunAndDone("plasma-applet-eventcalendar"):
+            call("git pull origin master")
             call("kpackagetool5 -i package -t Plasma/Applet")
 
     # === Load and link configurations ===
