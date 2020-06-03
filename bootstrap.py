@@ -174,9 +174,9 @@ def first_install():
     with RunAndDone(f"{DOTFILES_DIR}/software", purge=True):
         # Install latte-dock, applets, and other tweaks
         print("Installing latte-dock...")
-        clone("https://github.com/KDE/latte-dock.git")
-        with RunAndDone("latte-dock"):
-            call("sh install.sh", check=True)
+        # The latest git release of latte-dock doesn't work with window-appmenu,
+        # so use the stable v9 version in the repositories for now
+        call("sudo apt install -y latte-dock")
 
         clone("https://github.com/psifidotos/applet-window-appmenu.git")
         with RunAndDone("applet-window-appmenu"):
@@ -285,10 +285,10 @@ def update():
     # The `software` folder is in .gitignore and should be kept around
     with RunAndDone(f"{DOTFILES_DIR}/software", create=False):
         # Install latte-dock, applets, and other tweaks
-        print("Installing latte-dock...")
-        with RunAndDone("latte-dock", create=False):
-            sh("git pull origin master")
-            call("sh install.sh", check=True)
+        print("Updating latte-dock...")
+        # As long as latte-dock was installed with apt, it will
+        # be updated above. When switching to the git version,
+        # run install.sh again like below.
 
         with RunAndDone("applet-window-appmenu", create=False):
             sh("git pull origin master")
