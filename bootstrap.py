@@ -23,6 +23,14 @@ USER = os.getlogin()
 HOME = os.environ["HOME"]
 
 
+TARGET_DIR_TO_DOTFILES = {
+    HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
+    f"{HOME}/.local/share/konsole": ["konsole.profile"],
+    f"{HOME}/.config": ["kwinrc"],
+    f"{HOME}/.config/latte": ["condensed.layout.latte"],
+}
+
+
 def call(args, check=False, env=None):
     return run(args.strip().split(" "), check=check, env=env)
 
@@ -63,6 +71,18 @@ class RunAndDone:
 
     def __exit__(self, *args):
         os.chdir(self.prev_path)
+
+
+def link_configs():
+    for path, dotfiles in TARGET_DIR_TO_DOTFILES.items():
+        with RunAndDone(path):
+            for dotfile in dotfiles:
+                # Delete what's already there - this script should be ran before anything of
+                # value is created
+                if os.path.exists(dotfile) or os.path.islink(dotfile):
+                    os.remove(dotfile)
+                source = os.path.join(DOTFILES_DIR, dotfile)
+                call(f"ln -s {source} {dotfile}")
 
 
 call("sudo -v")
@@ -207,24 +227,8 @@ def first_install():
         with RunAndDone("plasma-applet-eventcalendar"):
             call("kpackagetool5 -i package -t Plasma/Applet")
 
-
     # === Load and link configurations ===
-    TARGET_DIR_TO_DOTFILES = {
-        HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
-        f"{HOME}/.local/share/konsole": ["konsole.profile"],
-        f"{HOME}/.config": ["kwinrc"],
-        f"{HOME}/.config/latte": ["condensed.layout.latte"],
-    }
-
-    for path, dotfiles in TARGET_DIR_TO_DOTFILES.items():
-        with RunAndDone(path):
-            for dotfile in dotfiles:
-                # Delete what's already there - this script should be ran before anything of
-                # value is created
-                if os.path.exists(dotfile) or os.path.islink(dotfile):
-                    os.remove(dotfile)
-                source = os.path.join(DOTFILES_DIR, dotfile)
-                call(f"ln -s {source} {dotfile}")
+    link_configs()
 
     # Install the desired nerdfont
     FONT_DIR = os.path.join(HOME, ".local/share/fonts")
@@ -326,21 +330,7 @@ def update():
             call("kpackagetool5 -i package -t Plasma/Applet")
 
     # === Load and link configurations ===
-    TARGET_DIR_TO_DOTFILES = {
-        HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
-        f"{HOME}/.local/share/konsole": ["konsole.profile"],
-        f"{HOME}/.config": ["kwinrc"],
-    }
-
-    for path, dotfiles in TARGET_DIR_TO_DOTFILES.items():
-        with RunAndDone(path):
-            for dotfile in dotfiles:
-                # Delete what's already there - this script should be ran before anything of
-                # value is created
-                if os.path.exists(dotfile) or os.path.islink(dotfile):
-                    os.remove(dotfile)
-                source = os.path.join(DOTFILES_DIR, dotfile)
-                call(f"ln -s {source} {dotfile}")
+    link_configs()
 
 
 if __name__ == "__main__":
