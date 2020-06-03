@@ -203,6 +203,11 @@ def first_install():
         with RunAndDone("plasma-applet-presentwindows"):
             call("kpackagetool5 -i package -t Plasma/Applet")
 
+        clone("https://github.com/Zren/plasma-applet-eventcalendar.git")
+        with RunAndDone("plasma-applet-eventcalendar"):
+            call("kpackagetool5 -i package -t Plasma/Applet")
+
+
     # === Load and link configurations ===
     TARGET_DIR_TO_DOTFILES = {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
