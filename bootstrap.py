@@ -98,6 +98,7 @@ def first_install():
         "libxcb-randr0-dev",
         "libx11-xcb-dev",
         "libkdecorations2-dev",
+        "htop",
     ]
 
     SNAPS_TO_INSTALL = [
