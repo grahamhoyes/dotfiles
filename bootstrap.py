@@ -27,7 +27,7 @@ TARGET_DIR_TO_DOTFILES = {
     HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
     f"{HOME}/.local/share/konsole": ["konsole.profile"],
     f"{HOME}/.config": ["kwinrc"],
-    f"{HOME}/.config/latte": ["Condensed.layout.latte"],
+    #f"{HOME}/.config/latte": ["Condensed.layout.latte"], # Must be imported manually
 }
 
 
