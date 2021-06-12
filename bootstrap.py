@@ -119,6 +119,10 @@ def first_install():
         "libx11-xcb-dev",
         "libkdecorations2-dev",
         "htop",
+        "apt-transport-https",
+        "ca-certificates",
+        "gnupg-agent",
+        "software-properties-common",
     ]
 
     SNAPS_TO_INSTALL = [
@@ -157,13 +161,10 @@ def first_install():
     os.remove("oh-my-zsh_install.sh")
 
     # Install powerlevel10k
-    # This is my fork of powerlevel10k, which just tweaks how the base anaconda environment is shown
-    # Note: I made a typo in "anaconda" when making the branch, fix that :facepalm:
     print("Installing powerlevel10k...")
     clone(
-        "https://github.com/grahamhoyes/powerlevel10k.git",
-        f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k",
-        "-b base_anaconva_env --depth=1",
+        "https://github.com/romkatv/powerlevel10k.git",
+        f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k"
     )
 
     # Install zsh plugins
@@ -226,6 +227,7 @@ def first_install():
         clone("https://github.com/Zren/plasma-applet-eventcalendar.git")
         with RunAndDone("plasma-applet-eventcalendar"):
             call("kpackagetool5 -i package -t Plasma/Applet")
+    
 
     # === Load and link configurations ===
     link_configs()

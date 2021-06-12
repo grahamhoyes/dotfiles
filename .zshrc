@@ -81,18 +81,18 @@ plugins=(
 source $ZSH/oh-my-zsh.sh
 
 # User configuration
-export PATH="$HOME/.miniconda3/bin:$PATH"
+CONDA_INSTALL_DIR="$HOME/.miniconda3"
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/home/graham/.miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+__conda_setup="$("$CONDA_INSTALL_DIR/bin/conda" 'shell.bash' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
-    if [ -f "/home/graham/.miniconda3/etc/profile.d/conda.sh" ]; then
-        . "/home/graham/.miniconda3/etc/profile.d/conda.sh"
+    if [ -f "$CONDA_INSTALL_DIR/etc/profile.d/conda.sh" ]; then
+        . "$CONDA_INSTALL_DIR/etc/profile.d/conda.sh"
     else
-        export PATH="/home/graham/.miniconda3/bin:$PATH"
+        export PATH="$CONDA_INSTALL_DIR/bin:$PATH"
     fi
 fi
 unset __conda_setup
@@ -112,6 +112,7 @@ POWERLEVEL9K_ANACONDA_RIGHT_DELIMITER=""
 POWERLEVEL9K_VIRTUALENV_BACKGROUND='035'
 POWERLEVEL9K_ANACONDA_BACKGROUND='035'
 POWERLEVEL9K_ANACONDA_SHOW_PYTHON_VERSION=false
+POWERLEVEL9K_ANACONDA_CONTENT_EXPANSION='${${CONDA_PROMPT_MODIFIER#\(}%\) }'
 
 # dir
 POWERLEVEL9K_DIR_PATH_SEPARATOR=" $(print_icon "LEFT_SUBSEGMENT_SEPARATOR") "
