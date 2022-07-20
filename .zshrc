@@ -1,5 +1,5 @@
 # If you come from bash you might have to change your $PATH.
-export PATH=$HOME/bin:/usr/local/bin:/snap/bin:$PATH
+export PATH=$HOME/bin:/usr/local/bin:/snap/bin:/home/graham/.local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
@@ -85,7 +85,7 @@ CONDA_INSTALL_DIR="$HOME/.miniconda3"
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$("$CONDA_INSTALL_DIR/bin/conda" 'shell.bash' 'hook' 2> /dev/null)"
+__conda_setup="$("$CONDA_INSTALL_DIR/bin/conda" 'shell.zsh' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else

@@ -6,11 +6,31 @@ OpenGLIsUnsafe=false
 
 [Desktops]
 Id_1=62e28989-213a-4565-a7fb-6d07995507d2
-Number=1
-Rows=1
+Id_2=c1fb0181-e6e9-4bba-8454-12c9c2b73cc5
+Id_3=81f5b2ff-f5ad-4935-ad4a-00dfe1ff3fa8
+Id_4=156b9e89-611e-465b-9311-d20bf51320d7
+Id_5=eac52b24-36ac-41f9-bf92-83cb0691da17
+Id_6=7ec47b7d-a32b-4137-8eb8-cfda94daf0cc
+Name_1=Top Left
+Name_2=Top Right
+Name_3=Middle Left
+Name_4=Middle Right
+Name_5=Bottom Left
+Name_6=Bottom Right
+Number=6
+Rows=3
 
 [ModifierOnlyShortcuts]
 Meta=org.kde.lattedock,/Latte,org.kde.LatteDock,activateLauncherMenu
 
+[TabBox]
+DesktopLayout=org.kde.breeze.desktop
+DesktopListLayout=org.kde.breeze.desktop
+LayoutName=org.kde.breeze.desktop
+
 [Windows]
 BorderlessMaximizedWindows=true
+
+[org.kde.kdecoration2]
+library=org.kde.breeze
+theme=Breeze
