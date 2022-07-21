@@ -107,7 +107,7 @@ class RunAndDone:
     def __enter__(self):
         self.prev_path = os.getcwd()
         if self.purge and os.path.isdir(self.path):
-            rmtree(path)
+            rmtree(self.path)
 
         if self.create and not os.path.isdir(self.path):
             os.makedirs(self.path)
