@@ -9,7 +9,7 @@ This script is broken into two sections:
 """
 
 import argparse
-from cmath import e
+import functools
 import os
 import platform
 import requests
@@ -51,16 +51,30 @@ DOTFILE_LOCATIONS = {
     }
 }
 
-_is_sudo = False
+def once(func):
+    """
+    Decorator to make sure a function only gets called once
+    """
+    ran = False
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        nonlocal ran
+        if ran:
+            return
+
+        res = func(*args, **kwargs)
+        ran = True
+
+        return res
+
+    return wrapper
+
+
+@once
 def sudo():
-    global _is_sudo
-
-    if _is_sudo:
-        return
-
     call("sudo -v")
 
-    _is_sudo = True
 
 def call(args, check=False, env=None):
     return run(args.strip().split(" "), check=check, env=env)
@@ -103,7 +117,7 @@ class RunAndDone:
     def __exit__(self, *args):
         os.chdir(self.prev_path)
 
-
+@once
 def link_configs(overwrite=False):
     configs = DOTFILE_LOCATIONS[os_name]
 
@@ -119,11 +133,7 @@ def link_configs(overwrite=False):
                 source = os.path.join(DOTFILES_DIR, dotfile)
                 call(f"ln -s {source} {dotfile}")
 
-
-call("sudo -v")
-
-_setup_shell_unix_done = False
-
+@once
 def setup_shell_unix():
     """
     Sets up my preferred shell with Oh My Zsh, Powerlevel10k,
@@ -134,12 +144,6 @@ def setup_shell_unix():
     Does not require privileged execution, so this can be executed
     anywhere.
     """
-
-    global _setup_shell_unix_done
-
-    if _setup_shell_unix_done:
-        # Only run once
-        return
 
     # Install the latest version of Oh My Zsh the recommended way.
     # This also sets the default shell to zsh if possible (if not,
@@ -192,10 +196,38 @@ def setup_shell_unix():
         call(f"sh miniconda3_install.sh -b -p ${HOME}/.miniconda3")
         os.remove("miniconda3_install.sh")
 
-    _setup_shell_unix_done = True
+@once
+def update_shell_unix():
+    """
+    Updates shell components set up by `setup_shell_unix
+    """
 
-_install_fonts_done = False
+    # Re-link configs
+    link_configs()
 
+    # Update Oh My Zsh
+    print("Updating oh-my-zsh...")
+    with RunAndDone(f"{HOME}/.oh-my-zsh/", create=False):
+        call("sh upgrade.sh")
+
+    # Update powerlevel10k
+    print("Updating powerlevel10k...")
+    with RunAndDone(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
+        call("git pull origin master")
+
+    # Update zsh plugins
+    print("Updating oh-my-zsh plugins...")
+    with RunAndDone(
+        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting", create=False
+    ):
+        call("git pull origin master")
+
+    with RunAndDone(
+        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False
+    ):
+        call("git pull origin master")
+
+@once
 def install_fonts():
     """
     Installs terminal fonts on Mac on Linux.
@@ -205,12 +237,6 @@ def install_fonts():
     Fonts to install:
         - DejaVu Sans Mono
     """
-
-    global _install_fonts_done
-
-    if _install_fonts_done:
-        # Only run once
-        return
 
     if os_name == "Linux":
         font_dir = f"{HOME}/.local/share/fonts"
@@ -237,10 +263,7 @@ def install_fonts():
                 # On linux, refresh the font cache
                 call(f"fc-cache -f ${font_dir}")
 
-    _install_fonts_done = True
-
-_install_latte_dock_done = False
-
+@once
 def install_latte_dock():
     """
     Install Latte dock
@@ -251,11 +274,6 @@ def install_latte_dock():
     This should only be run on Ubuntu (installation steps differ with other
     distros) with KDE installed
     """
-
-    global _install_fonts_done
-
-    if _install_fonts_done:
-        return
 
     # Install dependencies needed to build
     deps = [
@@ -342,7 +360,45 @@ def install_latte_dock():
         with RunAndDone("plasma-applet-eventcalendar"):
             call("kpackagetool5 -i package -t Plasma/Applet")
 
-def first_install_kubuntu():
+@once
+def update_latte_dock():
+    print("Updating latte-dock...")
+    with RunAndDone(f"{DOTFILES_DIR}/software", create=False):
+        # Install latte-dock, applets, and other tweaks
+        # As long as latte-dock was installed with apt, it will
+        # be updated above. When switching to the git version,
+        # run install.sh again like below.
+
+        with RunAndDone("applet-window-appmenu", create=False):
+            call("git pull origin master")
+            call("sh install.sh", check=True)
+
+        with RunAndDone("applet-window-buttons", create=False):
+            call("git pull origin master")
+            call("sh install.sh", check=True)
+
+        with RunAndDone("applet-window-title", create=False):
+            call("git pull origin master")
+            call("plasmapkg2 -i .")
+
+        with RunAndDone("applet-latte-spacer", create=False):
+            call("git pull origin master")
+            call("plasmapkg2 -i .")
+
+        with RunAndDone("latte-indicator-dashtopanel", create=False):
+            call("git pull origin master")
+            call("kpackagetool5 -i . -t Latte/Indicator")
+
+        with RunAndDone("plasma-applet-presentwindows", create=False):
+            call("git pull origin master")
+            call("kpackagetool5 -i package -t Plasma/Applet")
+
+        with RunAndDone("plasma-applet-eventcalendar"):
+            call("git pull origin master")
+            call("kpackagetool5 -i package -t Plasma/Applet")
+
+@once
+def first_install_kubuntu(latte_dock=False):
     """
     Perform a full first install for Kubuntu
 
@@ -406,9 +462,22 @@ def first_install_kubuntu():
     setup_shell_unix()
     install_fonts()
 
+    if latte_dock:
+        install_latte_dock()
 
-def update():
-    # === Update tools and software ===
+@once
+def update_ubuntu(latte_dock=False):
+    """
+    Update tools and software for Ubuntu
+    """
+
+    sudo()
+
+    # Re-link configs
+    link_configs()
+
+    # Update shell
+    update_shell_unix()
 
     # Perform a system update
     call("sudo apt update")
@@ -424,70 +493,8 @@ def update():
                 continue
             call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
 
-    # Update oh-my-zsh
-    print("Updating oh-my-zsh...")
-    with RunAndDone(f"{HOME}/.oh-my-zsh/", create=False):
-        call("sh upgrade.sh")
-
-    # Update powerlevel10k
-    # This is my fork of powerlevel10k, which just tweaks how the base anaconda environment is shown
-    # Note: I made a typo in "anaconda" when making the branch, fix that :facepalm:
-    print("Updating powerlevel10k...")
-    with RunAndDone(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
-        call("git pull origin base_anaconva_env")
-
-    # Update zsh plugins
-    print("Updating oh-my-zsh plugins...")
-    with RunAndDone(
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting", create=False
-    ):
-        call("git pull origin master")
-
-    with RunAndDone(
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False
-    ):
-        call("git pull origin master")
-
-    # Some installers we want to stick around, specifically so we can update and rebuild when things go awry.
-    # The `software` folder is in .gitignore and should be kept around
-    with RunAndDone(f"{DOTFILES_DIR}/software", create=False):
-        # Install latte-dock, applets, and other tweaks
-        print("Updating latte-dock...")
-        # As long as latte-dock was installed with apt, it will
-        # be updated above. When switching to the git version,
-        # run install.sh again like below.
-
-        with RunAndDone("applet-window-appmenu", create=False):
-            call("git pull origin master")
-            call("sh install.sh", check=True)
-
-        with RunAndDone("applet-window-buttons", create=False):
-            call("git pull origin master")
-            call("sh install.sh", check=True)
-
-        with RunAndDone("applet-window-title", create=False):
-            call("git pull origin master")
-            call("plasmapkg2 -i .")
-
-        with RunAndDone("applet-latte-spacer", create=False):
-            call("git pull origin master")
-            call("plasmapkg2 -i .")
-
-        with RunAndDone("latte-indicator-dashtopanel", create=False):
-            call("git pull origin master")
-            call("kpackagetool5 -i . -t Latte/Indicator")
-
-        with RunAndDone("plasma-applet-presentwindows", create=False):
-            call("git pull origin master")
-            call("kpackagetool5 -i package -t Plasma/Applet")
-
-        with RunAndDone("plasma-applet-eventcalendar"):
-            call("git pull origin master")
-            call("kpackagetool5 -i package -t Plasma/Applet")
-
-    # === Load and link configurations ===
-    link_configs()
-
+    if latte_dock:
+        update_latte_dock()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Bootstrap dotfiles and configuration")
@@ -496,16 +503,11 @@ if __name__ == "__main__":
         "-u",
         action="store_true",
         default=False,
-        help="Update packages and configurations",
+        help="Updates configs and shell. To update packages, pass --full",
     )
     parser.add_argument(
         "--full",
-        help="Perform a full install. Requires --os."
-    )
-    parser.add_argument(
-        "--os",
-        choices=["linux"],
-        help="Operating system. Required for full install."
+        help="Perform a full install. Includes shell and fonts."
     )
     parser.add_argument(
         "--shell",
@@ -519,11 +521,19 @@ if __name__ == "__main__":
         default=False,
         help="Install fonts"
     )
+    parser.add_argument(
+        "--latte-dock",
+        action="store_true",
+        default=False,
+        help="Install latte-dock (KDE only)"
+    )
+    parser.add_argument(
+        "--configs",
+        action="store_true",
+        default=False,
+        help="Link configs"
+    )
     args = parser.parse_args()
-
-    if args.full and not args.os:
-        print("Must specify an OS with --os to perform a full install")
-        sys.exit(1)
 
     if args.shell:
         setup_shell_unix()
@@ -531,7 +541,23 @@ if __name__ == "__main__":
     if args.fonts:
         install_fonts()
 
-    if args.update:
-        update()
-    else:
-        first_install()
+    if args.configs:
+        link_configs()
+
+    if args.full and not args.update:
+        # Full install only
+        if os_name == "Linux":
+            first_install_kubuntu(latte_dock=args.latte_dock)
+        else:
+            print(f"Full install not supported for {os_name}")
+    elif args.update:
+        if args.full:
+            # Full OS update
+            if os_name == "Linux":
+                update_ubuntu(latte_dock=args.latte_dock)
+            else:
+                print(f"Full update not supported for {os_name}")
+        else:
+            # Just update configs and shell
+            link_configs()
+            update_shell_unix()
