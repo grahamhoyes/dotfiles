@@ -164,3 +164,6 @@ zstyle :bracketed-paste-magic paste-finish pastefinish
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias rgrep="grep -n -r . -e"
+
+
+. "$HOME/.cargo/env"
