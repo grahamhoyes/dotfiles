@@ -24,7 +24,7 @@ if os_name not in ("Linux", "Darwin"):
     print(f"{os_name} is not a supported environment")
     sys.exit(1)
 
-if arch not in ("x86_64"):
+if arch not in ("x86_64", "arm64"):
     print(f"{arch} is not a supported architecture")
     sys.exit(1)
 
@@ -187,10 +187,11 @@ def setup_shell_unix():
         print(f"{HOME}/.miniconda3/ already exists. Skipping install")
     else:
         if os_name == "Linux":
-            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh"
-        elif os_name == "Darwin":
-            # Apple silicon not supported (until I get one)
-            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-MacOSX-x86_64.sh"
+            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+        elif os_name == "Darwin" and arch == "x86_64":
+            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
+        elif os_name == "Darwin" and arch == "amd64":
+            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh"
 
         call(f"curl -Lo miniconda3_install.sh {miniconda_installer}")
         call(f"sh miniconda3_install.sh -b -p ${HOME}/.miniconda3")
