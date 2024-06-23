@@ -197,6 +197,9 @@ def setup_shell_unix():
         call(f"sh miniconda3_install.sh -b -p ${HOME}/.miniconda3")
         os.remove("miniconda3_install.sh")
 
+    # Install Rust and Cargo
+    call("curl https://sh.rustup.rs -sSf | sh")
+
 @once
 def update_shell_unix():
     """
@@ -244,21 +247,23 @@ def install_fonts():
     elif os_name == "Darwin":
         font_dir = f"{HOME}/Library/Fonts"
 
+    download_url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{name}.zip"
+
     fonts = [
-        "Bold/complete/DejaVu Sans Mono Bold Nerd Font Complete Mono.ttf",
-        "Bold-Italic/complete/DejaVu Sans Mono Bold Oblique Nerd Font Complete Mono.ttf",
-        "Italic/complete/DejaVu Sans Mono Oblique Nerd Font Complete Mono.ttf",
-        "Regular/complete/DejaVu Sans Mono Nerd Font Complete Mono.ttf",
+        "DejaVuSansMono"
     ]
 
     print("Installing fonts...")
     with RunAndDone(font_dir):
         for font in fonts:
-            url = f"https://github.com/ryanoasis/nerd-fonts/raw/master/patched-fonts/DejaVuSansMono/{font}"
-            filename = font.split("/")[-1]
+            url = download_url.format(name=font)
+            filename = f"{font}.zip"
             res = requests.get(url)
             with open(filename, "wb+") as fd:
                 fd.write(res.content)
+
+            call(f"unzip {filename}")
+            os.remove(filename)
             
             if os_name == "Linux":
                 # On linux, refresh the font cache
@@ -425,7 +430,7 @@ def first_install_kubuntu(latte_dock=False):
 
     SNAPS_TO_INSTALL = [
         "slack --classic",
-        "pycharm-professional --classic",
+        #"pycharm-professional --classic",
         "spotify",
     ]
 
@@ -508,6 +513,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--full",
+        action="store_true",
+        default=False,
         help="Perform a full install. Includes shell and fonts."
     )
     parser.add_argument(

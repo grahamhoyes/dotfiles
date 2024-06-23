@@ -1,5 +1,6 @@
 [Appearance]
-Font=DejaVuSansMono Nerd Font Mono,12,-1,0,50,0,0,0,0,0,Book
+ColorScheme=Breeze
+Font=DejaVuSansM Nerd Font Mono,12,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
 
 [General]
 Command=/bin/zsh
