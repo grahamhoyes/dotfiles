@@ -580,6 +580,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
     if args.shell:
         setup_shell_unix()
 
@@ -606,3 +610,4 @@ if __name__ == "__main__":
             # Just update configs and shell
             link_configs()
             update_shell_unix()
+
