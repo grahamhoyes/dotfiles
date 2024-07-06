@@ -11,11 +11,13 @@ This script is broken into two sections:
 import argparse
 import functools
 import os
+from pathlib import Path
 import platform
 import requests
 from shutil import rmtree
 from subprocess import run
 import sys
+from typing import Union
 
 os_name = platform.system()
 arch = platform.machine()
@@ -30,7 +32,7 @@ if arch not in ("x86_64", "arm64"):
 
 
 # Make sure we're working from the right place
-DOTFILES_DIR = os.path.dirname(os.path.abspath(__file__))
+DOTFILES_DIR = Path(__file__).resolve().parent
 os.chdir(DOTFILES_DIR)
 
 # getlogin() has caveats, but for running an install script it should suffice
@@ -39,17 +41,18 @@ HOME = os.environ["HOME"]
 
 # For each supported OS, map destination locations
 # to dotfiles that should be linked there
-DOTFILE_LOCATIONS = {
+DOTFILE_LOCATIONS: dict[str, dict[str, list[str]]] = {
     "Linux": {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
         f"{HOME}/.local/share/konsole": ["konsole.profile"],
         f"{HOME}/.config": ["kwinrc"],
-        #f"{HOME}/.config/latte": ["Condensed.layout.latte"], # Must be imported manually
+        # f"{HOME}/.config/latte": ["Condensed.layout.latte"], # Must be imported manually
     },
     "Darwin": {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
-    }
+    },
 }
+
 
 def once(func):
     """
@@ -89,49 +92,75 @@ def clone(repo, destination="", args=""):
     call(f"git clone {repo} {destination} {args}")
 
 
+def prompt_bool(prompt: str) -> bool:
+    """
+    Prompt the user for a boolean (y/n) input
+    """
+    prompt += " [y/n] "
+    while True:
+        result = input(prompt).lower()
+        if result.startswith("y"):
+            return True
+        elif result.startswith("n"):
+            return False
+
+
 class RunAndDone:
     """
     chdir into the specified directory, and return to the previous directory on exit
     """
 
-    def __init__(self, path, create=True, purge=False):
+    def __init__(self, path: Union[str, Path], create=True, purge=False):
         """
         :param path: Path to chdir into
         :param create: If True, create the directory before entering
         :param purge: If True, then the directory will be removed then re-created
         """
+        if not isinstance(path, Path):
+            path = Path(path)
         self.path = path
         self.create = create
         self.purge = purge
 
     def __enter__(self):
         self.prev_path = os.getcwd()
-        if self.purge and os.path.isdir(self.path):
+        if self.purge and self.path.is_dir():
             rmtree(self.path)
 
-        if self.create and not os.path.isdir(self.path):
-            os.makedirs(self.path)
+        if self.create and not self.path.is_dir():
+            self.path.mkdir(parents=True)
 
         os.chdir(self.path)
 
     def __exit__(self, *args):
         os.chdir(self.prev_path)
 
+
 @once
-def link_configs(overwrite=False):
+def link_configs():
     configs = DOTFILE_LOCATIONS[os_name]
 
     for path, dotfiles in configs.items():
         with RunAndDone(path):
             for dotfile in dotfiles:
-                if os.path.exists(dotfile) or os.path.islink(dotfile):
+                df = Path(dotfile)
+                if df.exists():
+                    prompt = f"{dotfile} already exists"
+                    if df.is_symlink():
+                        prompt += f" ({df.absolute()} -> {df.resolve()})"
+                    prompt += ". Overwrite?"
+
+                    overwrite = prompt_bool(prompt)
+
                     if overwrite:
-                        os.remove(dotfile)
+                        # Delete the existing file
+                        df.unlink()
                     else:
                         continue
 
-                source = os.path.join(DOTFILES_DIR, dotfile)
-                call(f"ln -s {source} {dotfile}")
+                source = DOTFILES_DIR / dotfile
+                df.symlink_to(source)
+
 
 @once
 def setup_shell_unix():
@@ -152,18 +181,14 @@ def setup_shell_unix():
     call(
         "curl -Lo oh-my-zsh_install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
     )
-    call("sh oh-my-zsh_install.sh", env={
-        **os.environ,
-        "CHSH": "yes",
-        "RUNZSH": "no"
-    })
+    call("sh oh-my-zsh_install.sh", env={**os.environ, "CHSH": "yes", "RUNZSH": "no"})
     os.remove("oh-my-zsh_install.sh")
 
     # Install Powerlevel10k
     print("Installing powerlevel10k...")
     clone(
         "https://github.com/romkatv/powerlevel10k.git",
-        f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k"
+        f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k",
     )
 
     # Install zsh plugins
@@ -183,15 +208,21 @@ def setup_shell_unix():
     # and not initialize the shell. The .zshrc file in this repo
     # already has the `conda init zsh` output in it.
     print("Installing Miniconda")
-    if os.path.isdir("f{HOME}/.miniconda3"):
+    if os.path.isdir(f"{HOME}/.miniconda3"):
         print(f"{HOME}/.miniconda3/ already exists. Skipping install")
     else:
         if os_name == "Linux":
-            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+            miniconda_installer = (
+                "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
+            )
         elif os_name == "Darwin" and arch == "x86_64":
-            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
-        elif os_name == "Darwin" and arch == "amd64":
-            miniconda_installer = "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh"
+            miniconda_installer = (
+                "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
+            )
+        elif os_name == "Darwin" and arch == "arm64":
+            miniconda_installer = (
+                "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh"
+            )
 
         call(f"curl -Lo miniconda3_install.sh {miniconda_installer}")
         call(f"sh miniconda3_install.sh -b -p ${HOME}/.miniconda3")
@@ -199,6 +230,7 @@ def setup_shell_unix():
 
     # Install Rust and Cargo
     call("curl https://sh.rustup.rs -sSf | sh")
+
 
 @once
 def update_shell_unix():
@@ -231,6 +263,7 @@ def update_shell_unix():
     ):
         call("git pull origin master")
 
+
 @once
 def install_fonts():
     """
@@ -247,11 +280,11 @@ def install_fonts():
     elif os_name == "Darwin":
         font_dir = f"{HOME}/Library/Fonts"
 
-    download_url = "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{name}.zip"
+    download_url = (
+        "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{name}.zip"
+    )
 
-    fonts = [
-        "DejaVuSansMono"
-    ]
+    fonts = ["DejaVuSansMono"]
 
     print("Installing fonts...")
     with RunAndDone(font_dir):
@@ -264,10 +297,11 @@ def install_fonts():
 
             call(f"unzip {filename}")
             os.remove(filename)
-            
+
             if os_name == "Linux":
                 # On linux, refresh the font cache
                 call(f"fc-cache -f ${font_dir}")
+
 
 @once
 def install_latte_dock():
@@ -283,36 +317,36 @@ def install_latte_dock():
 
     # Install dependencies needed to build
     deps = [
-        'build-essential',
-        'cmake',
-        'extra-cmake-modules',
-        'gettext',
-        'kirigami2-dev',
-        'libkf5activities-dev',
-        'libkf5archive-dev',
-        'libkf5crash-dev',
-        'libkf5declarative-dev',
-        'libkf5iconthemes-dev',
-        'libkf5newstuff-dev',
-        'libkf5notifications-dev',
-        'libkf5plasma-dev',
-        'libkf5wayland-dev',
-        'libkf5windowsystem-dev',
-        'libkf5xmlgui-dev',
-        'libqt5waylandclient5-dev',
-        'libqt5x11extras5-dev',
-        'libsm-dev',
-        'libwayland-client++0',
-        'libwayland-dev',
-        'libx11-dev',
-        'libx11-xcb-dev',
-        'libxcb-randr0-dev',
-        'libxcb-shape0-dev',
-        'libxcb-util-dev',
-        'libxcb-util0-dev',
-        'plasma-wayland-protocols',
-        'qtdeclarative5-dev',
-        'qtwayland5-dev-tools'
+        "build-essential",
+        "cmake",
+        "extra-cmake-modules",
+        "gettext",
+        "kirigami2-dev",
+        "libkf5activities-dev",
+        "libkf5archive-dev",
+        "libkf5crash-dev",
+        "libkf5declarative-dev",
+        "libkf5iconthemes-dev",
+        "libkf5newstuff-dev",
+        "libkf5notifications-dev",
+        "libkf5plasma-dev",
+        "libkf5wayland-dev",
+        "libkf5windowsystem-dev",
+        "libkf5xmlgui-dev",
+        "libqt5waylandclient5-dev",
+        "libqt5x11extras5-dev",
+        "libsm-dev",
+        "libwayland-client++0",
+        "libwayland-dev",
+        "libx11-dev",
+        "libx11-xcb-dev",
+        "libxcb-randr0-dev",
+        "libxcb-shape0-dev",
+        "libxcb-util-dev",
+        "libxcb-util0-dev",
+        "plasma-wayland-protocols",
+        "qtdeclarative5-dev",
+        "qtwayland5-dev-tools",
     ]
 
     # Root access needed to install dependencies
@@ -326,10 +360,10 @@ def install_latte_dock():
 
     print("Installing latte-dock...")
 
-    # Some installers we want to stick around, specifically so we can update and 
-    # rebuild when things go awry. The `software` folder is in .gitignore and 
+    # Some installers we want to stick around, specifically so we can update and
+    # rebuild when things go awry. The `software` folder is in .gitignore and
     # should be kept around.
-    with RunAndDone(f"{DOTFILES_DIR}/software/latte-dock", purge=True):
+    with RunAndDone(DOTFILES_DIR / "software" / "latte-dock", purge=True):
         clone("https://github.com/KDE/latte-dock.git")
         with RunAndDone("latte-dock"):
             call("sh install.sh", check=True)
@@ -366,10 +400,11 @@ def install_latte_dock():
         with RunAndDone("plasma-applet-eventcalendar"):
             call("kpackagetool5 -i package -t Plasma/Applet")
 
+
 @once
 def update_latte_dock():
     print("Updating latte-dock...")
-    with RunAndDone(f"{DOTFILES_DIR}/software", create=False):
+    with RunAndDone(DOTFILES_DIR / "software", create=False):
         # Install latte-dock, applets, and other tweaks
         # As long as latte-dock was installed with apt, it will
         # be updated above. When switching to the git version,
@@ -403,6 +438,7 @@ def update_latte_dock():
             call("git pull origin master")
             call("kpackagetool5 -i package -t Plasma/Applet")
 
+
 @once
 def first_install_kubuntu(latte_dock=False):
     """
@@ -430,7 +466,6 @@ def first_install_kubuntu(latte_dock=False):
 
     SNAPS_TO_INSTALL = [
         "slack --classic",
-        #"pycharm-professional --classic",
         "spotify",
     ]
 
@@ -453,13 +488,15 @@ def first_install_kubuntu(latte_dock=False):
             call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
 
     # Install brave
-    call("sudo curl -fsSLo "
+    call(
+        "sudo curl -fsSLo "
         "/usr/share/keyrings/brave-browser-archive-keyring.gpg "
         "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg"
     )
-    call('echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] '
+    call(
+        'echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] '
         'https://brave-browser-apt-release.s3.brave.com/ stable main" '
-        '| sudo tee /etc/apt/sources.list.d/brave-browser-release.list'
+        "| sudo tee /etc/apt/sources.list.d/brave-browser-release.list"
     )
     call("sudo apt update")
     call("sudo apt install -y brave-browser")
@@ -470,6 +507,7 @@ def first_install_kubuntu(latte_dock=False):
 
     if latte_dock:
         install_latte_dock()
+
 
 @once
 def update_ubuntu(latte_dock=False):
@@ -502,6 +540,7 @@ def update_ubuntu(latte_dock=False):
     if latte_dock:
         update_latte_dock()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Bootstrap dotfiles and configuration")
     parser.add_argument(
@@ -515,31 +554,22 @@ if __name__ == "__main__":
         "--full",
         action="store_true",
         default=False,
-        help="Perform a full install. Includes shell and fonts."
+        help="Perform a full install. Includes shell and fonts.",
     )
     parser.add_argument(
-        "--shell",
-        action="store_true",
-        default=False,
-        help="Set up a shell environment"
+        "--shell", action="store_true", default=False, help="Set up a shell environment"
     )
     parser.add_argument(
-        "--fonts",
-        action="store_true",
-        default=False,
-        help="Install fonts"
+        "--fonts", action="store_true", default=False, help="Install fonts"
     )
     parser.add_argument(
         "--latte-dock",
         action="store_true",
         default=False,
-        help="Install latte-dock (KDE only)"
+        help="Install latte-dock (KDE only)",
     )
     parser.add_argument(
-        "--configs",
-        action="store_true",
-        default=False,
-        help="Link configs"
+        "--configs", action="store_true", default=False, help="Link configs"
     )
     args = parser.parse_args()
 
