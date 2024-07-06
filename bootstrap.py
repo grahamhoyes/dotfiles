@@ -43,13 +43,13 @@ HOME = os.environ["HOME"]
 # to dotfiles that should be linked there
 DOTFILE_LOCATIONS: dict[str, dict[str, list[str]]] = {
     "Linux": {
-        HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
+        HOME: [".vimrc", ".tmux.conf", ".zshrc", ".p10k.zsh", ".gitconfig"],
         f"{HOME}/.local/share/konsole": ["konsole.profile"],
         f"{HOME}/.config": ["kwinrc"],
         # f"{HOME}/.config/latte": ["Condensed.layout.latte"], # Must be imported manually
     },
     "Darwin": {
-        HOME: [".vimrc", ".tmux.conf", ".zshrc", ".gitconfig"],
+        HOME: [".vimrc", ".tmux.conf", ".zshrc", ".p10k.zsh", ".gitconfig"],
     },
 }
 
