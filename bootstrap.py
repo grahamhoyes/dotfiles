@@ -13,7 +13,6 @@ import functools
 import os
 from pathlib import Path
 import platform
-import requests
 from shutil import rmtree
 from subprocess import run
 import sys
@@ -279,6 +278,8 @@ def install_fonts():
         font_dir = f"{HOME}/.local/share/fonts"
     elif os_name == "Darwin":
         font_dir = f"{HOME}/Library/Fonts"
+    else:
+        raise ValueError(f"Unsupported OS: {os_name}")
 
     download_url = (
         "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{name}.zip"
@@ -286,17 +287,23 @@ def install_fonts():
 
     fonts = ["DejaVuSansMono"]
 
+    # Extra files in the zip archive that can be removed
+    extra_files_to_remove = ["README.md", "LICENSE.txt"]
+
     print("Installing fonts...")
     with RunAndDone(font_dir):
         for font in fonts:
             url = download_url.format(name=font)
             filename = f"{font}.zip"
-            res = requests.get(url)
-            with open(filename, "wb+") as fd:
-                fd.write(res.content)
 
+            call(f"curl -Lo {filename} {url}")
             call(f"unzip {filename}")
             os.remove(filename)
+
+            # Remove files that come along with the font
+            for f in extra_files_to_remove:
+                if os.path.isfile(f):
+                    os.remove(f)
 
             if os_name == "Linux":
                 # On linux, refresh the font cache
