@@ -1,11 +1,11 @@
 export DEFAULT_USER="graham"
 POWERLEVEL9K_MODE='nerdfont-complete'
 
-POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(virtualenv anaconda user ssh dir vcs status)
+POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(virtualenv anaconda user ssh dir vcs status kubecontext)
 POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(root_indicator background_jobs)
 POWERLEVEL9K_SHORTEN_DIR_LENGTH=2
 
-# Python environments
+## Python environments
 POWERLEVEL9K_ANACONDA_LEFT_DELIMITER=""
 POWERLEVEL9K_ANACONDA_RIGHT_DELIMITER=""
 POWERLEVEL9K_VIRTUALENV_BACKGROUND='035'
@@ -13,7 +13,7 @@ POWERLEVEL9K_ANACONDA_BACKGROUND='035'
 POWERLEVEL9K_ANACONDA_SHOW_PYTHON_VERSION=false
 POWERLEVEL9K_ANACONDA_CONTENT_EXPANSION='${${CONDA_PROMPT_MODIFIER#\(}%\) }'
 
-# dir
+## dir
 POWERLEVEL9K_DIR_PATH_SEPARATOR=" $(print_icon "LEFT_SUBSEGMENT_SEPARATOR") "
 POWERLEVEL9K_DIR_HOME_BACKGROUND="031"
 POWERLEVEL9K_DIR_HOME_FOREGROUND="255"
@@ -26,19 +26,31 @@ POWERLEVEL9K_DIR_DEFAULT_FOREGROUND="255"
 POWERLEVEL9K_DIR_ETC_BACKGROUND="031"
 POWERLEVEL9K_DIR_ETC_FOREGROUND="255"
 
-# user
+## user
 POWERLEVEL9K_HOME_FOLDER_ABBREVIATION=""
 POWERLEVEL9K_USER_DEFAULT_BACKGROUND="242"
 POWERLEVEL9K_USER_DEFAULT_FOREGROUND="255"
 
-# vcs
+## vcs
 POWERLEVEL9K_HIDE_BRANCH_ICON=true
+
+## kubernetes
+POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND="kubectl|helm|kubens|kubectx|kk|k9s"
+POWERLEVEL9K_KUBECONTEXT_SHOW_DEFAULT_NAMESPACE=0
+POWERLEVEL9K_KUBECONTEXT_BACKGROUND=021
+# These docs will be helpful for deciphering the expansions below:
+# https://zsh.sourceforge.io/Doc/Release/Expansion.html#Parameter-Expansion
+# Display the project, zone, and cluster (if different from the zone) if using a cloud k8s context
+POWERLEVEL9K_KUBECONTEXT_CONTENT_EXPANSION='${P9K_KUBECONTEXT_CLOUD_ACCOUNT:+${P9K_KUBECONTEXT_CLOUD_ACCOUNT} ${P9K_KUBECONTEXT_CLOUD_ZONE} ${${:-$P9K_KUBECONTEXT_CLOUD_CLUSTER}:#${P9K_KUBECONTEXT_CLOUD_ZONE}}}'
+# Display the full context name if using a non-cloud context
+POWERLEVEL9K_KUBECONTEXT_CONTENT_EXPANSION+='${${P9K_KUBECONTEXT_CLOUD_ACCOUNT:-${P9K_KUBECONTEXT_NAME}}:#${P9K_KUBECONTEXT_CLOUD_ACCOUNT}}'
+
 
 # This speeds up pasting with zsh-autosuggestions
 # https://github.com/zsh-users/zsh-autosuggestions/issues/238
 pasteinit() {
   OLD_SELF_INSERT=${${(s.:.)widgets[self-insert]}[2,3]}
-  zle -N self-insert url-quote-magic # I wonder if you'd need `.url-quote-magic`?
+  zle -N self-insert url-quote-magic
 }
 
 pastefinish() {

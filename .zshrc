@@ -6,7 +6,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # If you come from bash you might have to change your $PATH.
-export PATH=$HOME/bin:/usr/local/bin:/snap/bin:/home/graham/.local/bin:$PATH
+export PATH=$HOME/bin:/usr/local/bin:/snap/bin:$HOME/.local/bin:/opt/homebrew/bin:$PATH
 
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
@@ -119,6 +119,7 @@ unset __conda_setup
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias rgrep="grep -n -r . -e"
+alias kk="kubectx"
 
 
 . "$HOME/.cargo/env"
