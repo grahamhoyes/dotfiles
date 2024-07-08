@@ -4,6 +4,8 @@ This repo contains a collection of my dotfiles for configuring my shell on Linux
 
 ![Screenshot](img/screenshot.png)
 
+![Screenshot of something with an error](img/screenshot-with-error.png)
+
 ## New Computer Setup
 
 1. Install or verify dependencies needed to bootstrap:
