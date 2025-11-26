@@ -138,7 +138,7 @@ alias ca="conda activate"
 alias ce="conda deactivate"
 
 
-. "$HOME/.cargo/env"
+if [ -f "$HOME/.cargo/env" ]; then . "$HOME/.cargo/env"; fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -150,3 +150,4 @@ if [ -f "$HOME/bin/google-cloud-sdk/path.zsh.inc" ]; then . "$HOME/bin/google-cl
 
 # The next line enables shell command completion for gcloud.
 if [ -f "$HOME/bin/google-cloud-sdk/completion.zsh.inc" ]; then . "$HOME/bin/google-cloud-sdk/completion.zsh.inc"; fi
+
