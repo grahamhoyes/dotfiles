@@ -1,3 +1,7 @@
 software/
 __pycache__/
 .idea/
+
+# Legacy - stopped tracking kwinrc in this repository but some devices still have
+# it cloned and symlinked into this folder
+kwinrc

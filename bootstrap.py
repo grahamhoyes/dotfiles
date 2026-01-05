@@ -44,7 +44,6 @@ DOTFILE_LOCATIONS: dict[str, dict[str, list[str]]] = {
     "Linux": {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".p10k.zsh", ".gitconfig"],
         f"{HOME}/.local/share/konsole": ["konsole.profile"],
-        f"{HOME}/.config": ["kwinrc"],
         # f"{HOME}/.config/latte": ["Condensed.layout.latte"], # Must be imported manually
     },
     "Darwin": {
@@ -228,8 +227,9 @@ def setup_shell_unix():
         os.remove("miniconda3_install.sh")
 
     # Install Rust and Cargo
-    call("curl https://sh.rustup.rs -sSf | sh")
-
+    call("curl -Lo rustup.sh https://sh.rustup.rs")
+    call("sh rustup.sh --no-modify-path -y")
+    os.remove("rustup.sh")
 
 @once
 def update_shell_unix():
@@ -501,9 +501,9 @@ def first_install_kubuntu(latte_dock=False):
         "https://brave-browser-apt-release.s3.brave.com/brave-browser-archive-keyring.gpg"
     )
     call(
-        'echo "deb [signed-by=/usr/share/keyrings/brave-browser-archive-keyring.gpg arch=amd64] '
-        'https://brave-browser-apt-release.s3.brave.com/ stable main" '
-        "| sudo tee /etc/apt/sources.list.d/brave-browser-release.list"
+        "sudo curl -fsSLo "
+        "/etc/apt/sources.list.d/brave-browser-release.sources "
+        "https://brave-browser-apt-release.s3.brave.com/brave-browser.sources"
     )
     call("sudo apt update")
     call("sudo apt install -y brave-browser")
