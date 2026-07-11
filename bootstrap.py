@@ -44,7 +44,6 @@ DOTFILE_LOCATIONS: dict[str, dict[str, list[str]]] = {
     "Linux": {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".p10k.zsh", ".gitconfig"],
         f"{HOME}/.local/share/konsole": ["konsole.profile"],
-        # f"{HOME}/.config/latte": ["Condensed.layout.latte"], # Must be imported manually
     },
     "Darwin": {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".p10k.zsh", ".gitconfig"],
@@ -103,7 +102,7 @@ def prompt_bool(prompt: str) -> bool:
             return False
 
 
-class RunAndDone:
+class Pushd:
     """
     chdir into the specified directory, and return to the previous directory on exit
     """
@@ -139,7 +138,7 @@ def link_configs():
     configs = DOTFILE_LOCATIONS[os_name]
 
     for path, dotfiles in configs.items():
-        with RunAndDone(path):
+        with Pushd(path):
             for dotfile in dotfiles:
                 df = Path(dotfile)
                 if df.exists():
@@ -275,24 +274,22 @@ def update_shell_unix():
 
     # Update Oh My Zsh
     print("Updating oh-my-zsh...")
-    with RunAndDone(f"{HOME}/.oh-my-zsh/", create=False):
+    with Pushd(f"{HOME}/.oh-my-zsh/", create=False):
         call("sh upgrade.sh")
 
     # Update powerlevel10k
     print("Updating powerlevel10k...")
-    with RunAndDone(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
+    with Pushd(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
         call("git pull origin master")
 
     # Update zsh plugins
     print("Updating oh-my-zsh plugins...")
-    with RunAndDone(
+    with Pushd(
         f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting", create=False
     ):
         call("git pull origin master")
 
-    with RunAndDone(
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False
-    ):
+    with Pushd(f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False):
         call("git pull origin master")
 
     # Update uv
@@ -332,7 +329,7 @@ def install_fonts():
     extra_files_to_remove = ["README.md", "LICENSE.txt"]
 
     print("Installing fonts...")
-    with RunAndDone(font_dir):
+    with Pushd(font_dir):
         for font in fonts:
             url = download_url.format(name=font)
             filename = f"{font}.zip"
@@ -352,143 +349,7 @@ def install_fonts():
 
 
 @once
-def install_latte_dock():
-    """
-    Install Latte dock
-
-    Installs the latest version of latte dock from https://github.com/KDE/latte-dock.
-    Requires sudo privileges.
-
-    This should only be run on Ubuntu (installation steps differ with other
-    distros) with KDE installed
-    """
-
-    # Install dependencies needed to build
-    deps = [
-        "build-essential",
-        "cmake",
-        "extra-cmake-modules",
-        "gettext",
-        "kirigami2-dev",
-        "libkf5activities-dev",
-        "libkf5archive-dev",
-        "libkf5crash-dev",
-        "libkf5declarative-dev",
-        "libkf5iconthemes-dev",
-        "libkf5newstuff-dev",
-        "libkf5notifications-dev",
-        "libkf5plasma-dev",
-        "libkf5wayland-dev",
-        "libkf5windowsystem-dev",
-        "libkf5xmlgui-dev",
-        "libqt5waylandclient5-dev",
-        "libqt5x11extras5-dev",
-        "libsm-dev",
-        "libwayland-client++0",
-        "libwayland-dev",
-        "libx11-dev",
-        "libx11-xcb-dev",
-        "libxcb-randr0-dev",
-        "libxcb-shape0-dev",
-        "libxcb-util-dev",
-        "libxcb-util0-dev",
-        "plasma-wayland-protocols",
-        "qtdeclarative5-dev",
-        "qtwayland5-dev-tools",
-    ]
-
-    # Root access needed to install dependencies
-    sudo()
-
-    # Install dependencies
-    call("sudo add-apt-repository ppa:kubuntu-ppa/backports")
-    call("sudo apt update")
-    call("sudo apt dist-upgrade")
-    call("sudo apt install -y " + " ".join(deps))
-
-    print("Installing latte-dock...")
-
-    # Some installers we want to stick around, specifically so we can update and
-    # rebuild when things go awry. The `software` folder is in .gitignore and
-    # should be kept around.
-    with RunAndDone(DOTFILES_DIR / "software" / "latte-dock", purge=True):
-        clone("https://github.com/KDE/latte-dock.git")
-        with RunAndDone("latte-dock"):
-            call("sh install.sh", check=True)
-
-        # If there are issues with the git version, install the stable
-        # v9 version from the repositories instead:
-        # call("sudo apt install -y latte-dock")
-
-        clone("https://github.com/psifidotos/applet-window-appmenu.git")
-        with RunAndDone("applet-window-appmenu"):
-            call("sh install.sh", check=True)
-
-        clone("https://github.com/psifidotos/applet-window-buttons.git")
-        with RunAndDone("applet-window-buttons"):
-            call("sh install.sh", check=True)
-
-        clone("https://github.com/psifidotos/applet-window-title")
-        with RunAndDone("applet-window-title"):
-            call("plasmapkg2 -i .")
-
-        clone("https://github.com/psifidotos/applet-latte-spacer/")
-        with RunAndDone("applet-latte-spacer"):
-            call("plasmapkg2 -i .")
-
-        clone("https://github.com/psifidotos/latte-indicator-dashtopanel.git")
-        with RunAndDone("latte-indicator-dashtopanel"):
-            call("kpackagetool5 -i . -t Latte/Indicator")
-
-        clone("https://github.com/Zren/plasma-applet-presentwindows.git")
-        with RunAndDone("plasma-applet-presentwindows"):
-            call("kpackagetool5 -i package -t Plasma/Applet")
-
-        clone("https://github.com/Zren/plasma-applet-eventcalendar.git")
-        with RunAndDone("plasma-applet-eventcalendar"):
-            call("kpackagetool5 -i package -t Plasma/Applet")
-
-
-@once
-def update_latte_dock():
-    print("Updating latte-dock...")
-    with RunAndDone(DOTFILES_DIR / "software", create=False):
-        # Install latte-dock, applets, and other tweaks
-        # As long as latte-dock was installed with apt, it will
-        # be updated above. When switching to the git version,
-        # run install.sh again like below.
-
-        with RunAndDone("applet-window-appmenu", create=False):
-            call("git pull origin master")
-            call("sh install.sh", check=True)
-
-        with RunAndDone("applet-window-buttons", create=False):
-            call("git pull origin master")
-            call("sh install.sh", check=True)
-
-        with RunAndDone("applet-window-title", create=False):
-            call("git pull origin master")
-            call("plasmapkg2 -i .")
-
-        with RunAndDone("applet-latte-spacer", create=False):
-            call("git pull origin master")
-            call("plasmapkg2 -i .")
-
-        with RunAndDone("latte-indicator-dashtopanel", create=False):
-            call("git pull origin master")
-            call("kpackagetool5 -i . -t Latte/Indicator")
-
-        with RunAndDone("plasma-applet-presentwindows", create=False):
-            call("git pull origin master")
-            call("kpackagetool5 -i package -t Plasma/Applet")
-
-        with RunAndDone("plasma-applet-eventcalendar"):
-            call("git pull origin master")
-            call("kpackagetool5 -i package -t Plasma/Applet")
-
-
-@once
-def first_install_kubuntu(latte_dock=False):
+def first_install_kubuntu():
     """
     Perform a full first install for Kubuntu
 
@@ -529,7 +390,7 @@ def first_install_kubuntu(latte_dock=False):
         call(f"sudo snap install {package}")
 
     # Link desktop entries for snaps - this is necessary because krunner can't find them for some reason
-    with RunAndDone(f"{HOME}/.local/share/applications"):
+    with Pushd(f"{HOME}/.local/share/applications"):
         for file in os.listdir("/var/lib/snapd/desktop/applications/"):
             if not file.endswith(".desktop"):
                 continue
@@ -553,12 +414,9 @@ def first_install_kubuntu(latte_dock=False):
     setup_shell_unix()
     install_fonts()
 
-    if latte_dock:
-        install_latte_dock()
-
 
 @once
-def update_ubuntu(latte_dock=False):
+def update_ubuntu():
     """
     Update tools and software for Ubuntu
     """
@@ -579,14 +437,11 @@ def update_ubuntu(latte_dock=False):
     call(f"sudo snap refresh")
 
     # Link desktop entries for snaps - this is necessary because krunner can't find them for some reason
-    with RunAndDone(f"{HOME}/.local/share/applications"):
+    with Pushd(f"{HOME}/.local/share/applications"):
         for file in os.listdir("/var/lib/snapd/desktop/applications/"):
             if not file.endswith(".desktop"):
                 continue
             call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
-
-    if latte_dock:
-        update_latte_dock()
 
 
 if __name__ == "__main__":
@@ -611,12 +466,6 @@ if __name__ == "__main__":
         "--fonts", action="store_true", default=False, help="Install fonts"
     )
     parser.add_argument(
-        "--latte-dock",
-        action="store_true",
-        default=False,
-        help="Install latte-dock (KDE only)",
-    )
-    parser.add_argument(
         "--configs", action="store_true", default=False, help="Link configs"
     )
     args = parser.parse_args()
@@ -637,14 +486,14 @@ if __name__ == "__main__":
     if args.full and not args.update:
         # Full install only
         if os_name == "Linux":
-            first_install_kubuntu(latte_dock=args.latte_dock)
+            first_install_kubuntu()
         else:
             print(f"Full install not supported for {os_name}")
     elif args.update:
         if args.full:
             # Full OS update
             if os_name == "Linux":
-                update_ubuntu(latte_dock=args.latte_dock)
+                update_ubuntu()
             else:
                 print(f"Full update not supported for {os_name}")
         else:

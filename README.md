@@ -19,13 +19,13 @@ This repo contains a collection of my dotfiles for configuring my shell on Linux
     ```
 4. Run `python3 bootstrap.py` with the desired options to set up a system
 
-For a full first-time set up of a Kubuntu-esque system, run:
+For a full first-time set up of an Ubuntu or Mac system, run:
 
 ```shell
 python3 bootstrap.py --full
 ```
 
-This will perform a system upgrade, install a number of dependencies (including those needed by the script), and configure the shell, system fonts, and some aspects of KDE. A full restart afterwards is required for some changes to take effect.
+This will perform a system upgrade, install a number of dependencies (including those needed by the script), and configure the shell, system fonts, and common programs. A full restart afterwards is required for some changes to take effect.
 
 To only configure the terminal on either Linux or Mac OS, run:
 
