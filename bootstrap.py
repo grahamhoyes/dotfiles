@@ -13,7 +13,7 @@ import functools
 import os
 from pathlib import Path
 import platform
-from shutil import rmtree
+from shutil import rmtree, which
 from subprocess import run
 import sys
 from typing import Union
@@ -176,29 +176,48 @@ def setup_shell_unix():
     # This also sets the default shell to zsh if possible (if not,
     # you may need to set it manually).
     print("Installing Oh My Zsh...")
-    call(
-        "curl -Lo oh-my-zsh_install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
-    )
-    call("sh oh-my-zsh_install.sh", env={**os.environ, "CHSH": "yes", "RUNZSH": "no"})
-    os.remove("oh-my-zsh_install.sh")
+    if os.path.isdir(f"{HOME}/.oh-my-zsh/"):
+        print(f"Oh My Zsh already installed. Skipping.")
+    else:
+        call(
+            "curl -Lo oh-my-zsh_install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+        )
+        call(
+            "sh oh-my-zsh_install.sh", env={**os.environ, "CHSH": "yes", "RUNZSH": "no"}
+        )
+        os.remove("oh-my-zsh_install.sh")
 
     # Install Powerlevel10k
     print("Installing powerlevel10k...")
-    clone(
-        "https://github.com/romkatv/powerlevel10k.git",
-        f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k",
-    )
+    if os.path.isdir(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
+        print(f"powerlevel10k already installed. Skipping.")
+    else:
+        clone(
+            "https://github.com/romkatv/powerlevel10k.git",
+            f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k",
+        )
 
     # Install zsh plugins
     print("Installing oh-my-zsh plugins...")
-    clone(
-        "https://github.com/zsh-users/zsh-syntax-highlighting.git",
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting",
+    zsh_syntax_highlighting_path = (
+        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
     )
-    clone(
-        "https://github.com/zsh-users/zsh-autosuggestions",
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions",
-    )
+    if os.path.isdir(zsh_syntax_highlighting_path):
+        print(f"zsh-syntax-highlighting already installed. Skipping.")
+    else:
+        clone(
+            "https://github.com/zsh-users/zsh-syntax-highlighting.git",
+            zsh_syntax_highlighting_path,
+        )
+
+    zsh_autosuggestions_path = f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+    if os.path.isdir(zsh_autosuggestions_path):
+        print(f"zsh-autosuggestions already installed. Skipping.")
+    else:
+        clone(
+            "https://github.com/zsh-users/zsh-autosuggestions",
+            zsh_autosuggestions_path,
+        )
 
     # Install Miniconda 3
     #
@@ -207,7 +226,7 @@ def setup_shell_unix():
     # already has the `conda init zsh` output in it.
     print("Installing Miniconda")
     if os.path.isdir(f"{HOME}/.miniconda3"):
-        print(f"{HOME}/.miniconda3/ already exists. Skipping install")
+        print(f"Miniconda already installed. Skipping.")
     else:
         if os_name == "Linux":
             miniconda_installer = (
@@ -223,13 +242,27 @@ def setup_shell_unix():
             )
 
         call(f"curl -Lo miniconda3_install.sh {miniconda_installer}")
-        call(f"sh miniconda3_install.sh -b -p ${HOME}/.miniconda3")
+        call(f"sh miniconda3_install.sh -b -p {HOME}/.miniconda3")
         os.remove("miniconda3_install.sh")
 
+    # Install uv
+    print("Installing uv")
+    if which("uv") is not None:
+        print(f"uv already installed. Skipping.")
+    else:
+        call(f"curl -Lo uv_install.sh https://astral.sh/uv/install.sh")
+        call(f"sh uv_install.sh")
+        os.remove("uv_install.sh")
+
     # Install Rust and Cargo
-    call("curl -Lo rustup.sh https://sh.rustup.rs")
-    call("sh rustup.sh --no-modify-path -y")
-    os.remove("rustup.sh")
+    print("Installing Rust")
+    if which("rustup") is not None:
+        print(f"Rust already installed. Skipping.")
+    else:
+        call("curl -Lo rustup.sh https://sh.rustup.rs")
+        call("sh rustup.sh --no-modify-path -y")
+        os.remove("rustup.sh")
+
 
 @once
 def update_shell_unix():
@@ -261,6 +294,14 @@ def update_shell_unix():
         f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False
     ):
         call("git pull origin master")
+
+    # Update uv
+    print("Updating uv...")
+    call("uv self update")
+
+    # Update Rust
+    print("Updating rust...")
+    call("rustup update")
 
 
 @once
@@ -610,4 +651,3 @@ if __name__ == "__main__":
             # Just update configs and shell
             link_configs()
             update_shell_unix()
-
