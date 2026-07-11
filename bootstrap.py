@@ -177,7 +177,7 @@ def setup_shell_unix():
     # you may need to set it manually).
     print("Installing Oh My Zsh...")
     if os.path.isdir(f"{HOME}/.oh-my-zsh/"):
-        print(f"Oh My Zsh already installed. Skipping.")
+        print("Oh My Zsh already installed. Skipping.")
     else:
         urlretrieve(
             "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh",
@@ -191,7 +191,7 @@ def setup_shell_unix():
     # Install Powerlevel10k
     print("Installing powerlevel10k...")
     if os.path.isdir(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
-        print(f"powerlevel10k already installed. Skipping.")
+        print("powerlevel10k already installed. Skipping.")
     else:
         clone(
             "https://github.com/romkatv/powerlevel10k.git",
@@ -204,7 +204,7 @@ def setup_shell_unix():
         f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
     )
     if os.path.isdir(zsh_syntax_highlighting_path):
-        print(f"zsh-syntax-highlighting already installed. Skipping.")
+        print("zsh-syntax-highlighting already installed. Skipping.")
     else:
         clone(
             "https://github.com/zsh-users/zsh-syntax-highlighting.git",
@@ -213,7 +213,7 @@ def setup_shell_unix():
 
     zsh_autosuggestions_path = f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
     if os.path.isdir(zsh_autosuggestions_path):
-        print(f"zsh-autosuggestions already installed. Skipping.")
+        print("zsh-autosuggestions already installed. Skipping.")
     else:
         clone(
             "https://github.com/zsh-users/zsh-autosuggestions",
@@ -227,7 +227,7 @@ def setup_shell_unix():
     # already has the `conda init zsh` output in it.
     print("Installing Miniconda")
     if os.path.isdir(f"{HOME}/.miniconda3"):
-        print(f"Miniconda already installed. Skipping.")
+        print("Miniconda already installed. Skipping.")
     else:
         if os_name == "Linux":
             miniconda_installer = (
@@ -249,16 +249,16 @@ def setup_shell_unix():
     # Install uv
     print("Installing uv")
     if which("uv") is not None:
-        print(f"uv already installed. Skipping.")
+        print("uv already installed. Skipping.")
     else:
         urlretrieve("https://astral.sh/uv/install.sh", "uv_install.sh")
-        call(f"sh uv_install.sh")
+        call("sh uv_install.sh")
         os.remove("uv_install.sh")
 
     # Install Rust and Cargo
     print("Installing Rust")
     if which("rustup") is not None:
-        print(f"Rust already installed. Skipping.")
+        print("Rust already installed. Skipping.")
     else:
         urlretrieve("https://sh.rustup.rs", "rustup.sh")
         call("sh rustup.sh --no-modify-path -y")
@@ -436,7 +436,7 @@ def update_ubuntu():
     call("sudo apt dist-upgrade -y")
 
     # Update snaps
-    call(f"sudo snap refresh")
+    call("sudo snap refresh")
 
     # Link desktop entries for snaps - this is necessary because krunner can't find them for some reason
     with Pushd(f"{HOME}/.local/share/applications"):
