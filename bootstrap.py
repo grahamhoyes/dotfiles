@@ -17,6 +17,7 @@ from shutil import rmtree, which
 from subprocess import run
 import sys
 from typing import Union
+from urllib.request import urlretrieve
 
 os_name = platform.system()
 arch = platform.machine()
@@ -178,8 +179,9 @@ def setup_shell_unix():
     if os.path.isdir(f"{HOME}/.oh-my-zsh/"):
         print(f"Oh My Zsh already installed. Skipping.")
     else:
-        call(
-            "curl -Lo oh-my-zsh_install.sh https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh"
+        urlretrieve(
+            "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh",
+            "oh-my-zsh_install.sh",
         )
         call(
             "sh oh-my-zsh_install.sh", env={**os.environ, "CHSH": "yes", "RUNZSH": "no"}
@@ -240,7 +242,7 @@ def setup_shell_unix():
                 "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh"
             )
 
-        call(f"curl -Lo miniconda3_install.sh {miniconda_installer}")
+        urlretrieve(miniconda_installer, "miniconda3_install.sh")
         call(f"sh miniconda3_install.sh -b -p {HOME}/.miniconda3")
         os.remove("miniconda3_install.sh")
 
@@ -249,7 +251,7 @@ def setup_shell_unix():
     if which("uv") is not None:
         print(f"uv already installed. Skipping.")
     else:
-        call(f"curl -Lo uv_install.sh https://astral.sh/uv/install.sh")
+        urlretrieve("https://astral.sh/uv/install.sh", "uv_install.sh")
         call(f"sh uv_install.sh")
         os.remove("uv_install.sh")
 
@@ -258,7 +260,7 @@ def setup_shell_unix():
     if which("rustup") is not None:
         print(f"Rust already installed. Skipping.")
     else:
-        call("curl -Lo rustup.sh https://sh.rustup.rs")
+        urlretrieve("https://sh.rustup.rs", "rustup.sh")
         call("sh rustup.sh --no-modify-path -y")
         os.remove("rustup.sh")
 
@@ -334,7 +336,7 @@ def install_fonts():
             url = download_url.format(name=font)
             filename = f"{font}.zip"
 
-            call(f"curl -Lo {filename} {url}")
+            urlretrieve(url, filename)
             call(f"unzip {filename}")
             os.remove(filename)
 
@@ -345,7 +347,7 @@ def install_fonts():
 
             if os_name == "Linux":
                 # On linux, refresh the font cache
-                call(f"fc-cache -f ${font_dir}")
+                call(f"fc-cache -f {font_dir}")
 
 
 @once
@@ -355,7 +357,7 @@ def first_install_kubuntu():
 
     This installs:
         - A number of CLI utilities (curl, wget, vim, zsh, htop, etc)
-        - Snaps for pycharm, slack, and spotify
+        - Snaps for slack and spotify
         - Brave
     """
     # === Install tools and software ===
@@ -444,6 +446,52 @@ def update_ubuntu():
             call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
 
 
+@once
+def first_install_mac():
+    """
+    Perform a full first install for Mac
+
+    This installs:
+        - Homebrew
+    """
+
+    sudo()
+
+    # Install homebrew
+    urlretrieve(
+        "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh",
+        "brew_install.sh",
+    )
+    call(
+        "bash brew_install.sh",
+        env={**os.environ, "NONINTERACTIVE": "1"},
+    )
+    os.remove("brew_install.sh")
+
+    link_configs()
+    setup_shell_unix()
+    install_fonts()
+
+
+@once
+def update_mac():
+    """
+    Update tools and software for Mac
+    """
+
+    sudo()
+
+    # Re-link configs
+    link_configs()
+
+    # Update shell
+    update_shell_unix()
+
+    # Update homebrew formulae
+    call("brew update")
+    call("brew upgrade")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Bootstrap dotfiles and configuration")
     parser.add_argument(
@@ -487,6 +535,8 @@ if __name__ == "__main__":
         # Full install only
         if os_name == "Linux":
             first_install_kubuntu()
+        elif os_name == "Darwin":
+            first_install_mac()
         else:
             print(f"Full install not supported for {os_name}")
     elif args.update:
@@ -494,6 +544,8 @@ if __name__ == "__main__":
             # Full OS update
             if os_name == "Linux":
                 update_ubuntu()
+            elif os_name == "Darwin":
+                update_mac()
             else:
                 print(f"Full update not supported for {os_name}")
         else:
