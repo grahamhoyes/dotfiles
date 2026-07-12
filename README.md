@@ -19,19 +19,21 @@ This repo contains a collection of my dotfiles for configuring my shell on Linux
     ```
 4. Run `python3 bootstrap.py` with the desired options to set up a system
 
-For a full first-time set up of an Ubuntu or Mac system, run:
+For a full first-time set up of an Ubuntu or Mac system (requires `sudo` privileges), run:
 
 ```shell
 python3 bootstrap.py --full
 ```
 
-This will perform a system upgrade, install a number of dependencies (including those needed by the script), and configure the shell, system fonts, and common programs. A full restart afterwards is required for some changes to take effect.
+This will perform a system upgrade, install a number of dependencies, and configure the shell, system fonts, and common programs. A full restart afterwards is required for some changes to take effect.
 
-To only configure the terminal on either Linux or Mac OS, run:
+To configure only the terminal on either Linux or Mac OS, run:
 
 ```shell
-python3 bootstrap.py --shell --fonts --configs
+python3 bootstrap.py --shell --configs --fonts
 ```
+
+On a remote system, `--fonts` is unnecessary.
 
 ## Modifying Dotfiles
 

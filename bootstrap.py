@@ -11,11 +11,13 @@ This script is broken into two sections:
 import argparse
 import functools
 import os
-from pathlib import Path
 import platform
+import shlex
+import sys
+import tempfile
+from pathlib import Path
 from shutil import rmtree, which
 from subprocess import run
-import sys
 from typing import Union
 from urllib.request import urlretrieve
 
@@ -35,8 +37,6 @@ if arch not in ("x86_64", "arm64"):
 DOTFILES_DIR = Path(__file__).resolve().parent
 os.chdir(DOTFILES_DIR)
 
-# getlogin() has caveats, but for running an install script it should suffice
-USER = os.getlogin()
 HOME = os.environ["HOME"]
 
 # For each supported OS, map destination locations
@@ -50,6 +50,13 @@ DOTFILE_LOCATIONS: dict[str, dict[str, list[str]]] = {
         HOME: [".vimrc", ".tmux.conf", ".zshrc", ".p10k.zsh", ".gitconfig"],
     },
 }
+
+# Paths
+ZSH_SYNTAX_HIGHLIGHTING_PATH = (
+    f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+)
+ZSH_AUTOSUGGESTIONS_PATH = f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+POWERLEVEL10K_PATH = f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"
 
 
 def once(func):
@@ -77,8 +84,8 @@ def sudo():
     call("sudo -v")
 
 
-def call(args, check=False, env=None):
-    return run(args.strip().split(" "), check=check, env=env)
+def call(args, check=True, env=None):
+    return run(shlex.split(args), check=check, env=env)
 
 
 def clone(repo, destination="", args=""):
@@ -88,6 +95,25 @@ def clone(repo, destination="", args=""):
         )
 
     call(f"git clone {repo} {destination} {args}")
+
+
+def install_script(url, args="", shell="sh", env=None):
+    """
+    Download a shell installer from `url`, run it (passing any `args`),
+    and remove the downloaded file afterwards.
+
+    :param url: URL to download
+    :param args: Arguments to pass to the script
+    :param shell: Shell to use, default sh
+    :param env: Extra environment variables to pass to the script
+    """
+    fd, script = tempfile.mkstemp(suffix=".sh")
+    os.close(fd)
+    try:
+        urlretrieve(url, script)
+        call(f"{shell} {script} {args}", env={**os.environ, **(env or {})})
+    finally:
+        os.remove(script)
 
 
 def prompt_bool(prompt: str) -> bool:
@@ -179,45 +205,37 @@ def setup_shell_unix():
     if os.path.isdir(f"{HOME}/.oh-my-zsh/"):
         print("Oh My Zsh already installed. Skipping.")
     else:
-        urlretrieve(
+        install_script(
             "https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh",
-            "oh-my-zsh_install.sh",
+            env={"CHSH": "yes", "RUNZSH": "no"},
         )
-        call(
-            "sh oh-my-zsh_install.sh", env={**os.environ, "CHSH": "yes", "RUNZSH": "no"}
-        )
-        os.remove("oh-my-zsh_install.sh")
 
     # Install Powerlevel10k
     print("Installing powerlevel10k...")
-    if os.path.isdir(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
+    if os.path.isdir(POWERLEVEL10K_PATH):
         print("powerlevel10k already installed. Skipping.")
     else:
         clone(
             "https://github.com/romkatv/powerlevel10k.git",
-            f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k",
+            POWERLEVEL10K_PATH,
         )
 
     # Install zsh plugins
     print("Installing oh-my-zsh plugins...")
-    zsh_syntax_highlighting_path = (
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
-    )
-    if os.path.isdir(zsh_syntax_highlighting_path):
+    if os.path.isdir(ZSH_SYNTAX_HIGHLIGHTING_PATH):
         print("zsh-syntax-highlighting already installed. Skipping.")
     else:
         clone(
             "https://github.com/zsh-users/zsh-syntax-highlighting.git",
-            zsh_syntax_highlighting_path,
+            ZSH_SYNTAX_HIGHLIGHTING_PATH,
         )
 
-    zsh_autosuggestions_path = f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
-    if os.path.isdir(zsh_autosuggestions_path):
+    if os.path.isdir(ZSH_AUTOSUGGESTIONS_PATH):
         print("zsh-autosuggestions already installed. Skipping.")
     else:
         clone(
             "https://github.com/zsh-users/zsh-autosuggestions",
-            zsh_autosuggestions_path,
+            ZSH_AUTOSUGGESTIONS_PATH,
         )
 
     # Install Miniconda 3
@@ -241,34 +259,30 @@ def setup_shell_unix():
             miniconda_installer = (
                 "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh"
             )
+        else:
+            raise RuntimeError(f"No Miniconda installer for {os_name}/{arch}")
 
-        urlretrieve(miniconda_installer, "miniconda3_install.sh")
-        call(f"sh miniconda3_install.sh -b -p {HOME}/.miniconda3")
-        os.remove("miniconda3_install.sh")
+        install_script(miniconda_installer, f"-b -p {HOME}/.miniconda3")
 
     # Install uv
     print("Installing uv")
     if which("uv") is not None:
         print("uv already installed. Skipping.")
     else:
-        urlretrieve("https://astral.sh/uv/install.sh", "uv_install.sh")
-        call("sh uv_install.sh")
-        os.remove("uv_install.sh")
+        install_script("https://astral.sh/uv/install.sh")
 
     # Install Rust and Cargo
     print("Installing Rust")
     if which("rustup") is not None:
         print("Rust already installed. Skipping.")
     else:
-        urlretrieve("https://sh.rustup.rs", "rustup.sh")
-        call("sh rustup.sh --no-modify-path -y")
-        os.remove("rustup.sh")
+        install_script("https://sh.rustup.rs", "--no-modify-path -y")
 
 
 @once
 def update_shell_unix():
     """
-    Updates shell components set up by `setup_shell_unix
+    Updates shell components set up by `setup_shell_unix`
     """
 
     # Re-link configs
@@ -277,21 +291,19 @@ def update_shell_unix():
     # Update Oh My Zsh
     print("Updating oh-my-zsh...")
     with Pushd(f"{HOME}/.oh-my-zsh/", create=False):
-        call("sh upgrade.sh")
+        call("sh tools/upgrade.sh")
 
     # Update powerlevel10k
     print("Updating powerlevel10k...")
-    with Pushd(f"{HOME}/.oh-my-zsh/custom/themes/powerlevel10k/"):
+    with Pushd(POWERLEVEL10K_PATH, create=False):
         call("git pull origin master")
 
     # Update zsh plugins
     print("Updating oh-my-zsh plugins...")
-    with Pushd(
-        f"{HOME}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting", create=False
-    ):
+    with Pushd(ZSH_SYNTAX_HIGHLIGHTING_PATH, create=False):
         call("git pull origin master")
 
-    with Pushd(f"{HOME}/.oh-my-zsh/custom/plugins/zsh-autosuggestions", create=False):
+    with Pushd(ZSH_AUTOSUGGESTIONS_PATH, create=False):
         call("git pull origin master")
 
     # Update uv
@@ -350,6 +362,20 @@ def install_fonts():
                 call(f"fc-cache -f {font_dir}")
 
 
+def link_snap_desktop_entries():
+    """
+    Symlink snap desktop entries
+
+    This is necessary because krunner can't find them for some reason.
+    """
+    snap_apps = "/var/lib/snapd/desktop/applications"
+    with Pushd(f"{HOME}/.local/share/applications"):
+        for file in os.listdir(snap_apps):
+            if not file.endswith(".desktop"):
+                continue
+            call(f"ln -sf {snap_apps}/{file} .")
+
+
 @once
 def first_install_kubuntu():
     """
@@ -391,12 +417,7 @@ def first_install_kubuntu():
     for package in SNAPS_TO_INSTALL:
         call(f"sudo snap install {package}")
 
-    # Link desktop entries for snaps - this is necessary because krunner can't find them for some reason
-    with Pushd(f"{HOME}/.local/share/applications"):
-        for file in os.listdir("/var/lib/snapd/desktop/applications/"):
-            if not file.endswith(".desktop"):
-                continue
-            call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
+    link_snap_desktop_entries()
 
     # Install brave
     call(
@@ -438,12 +459,7 @@ def update_ubuntu():
     # Update snaps
     call("sudo snap refresh")
 
-    # Link desktop entries for snaps - this is necessary because krunner can't find them for some reason
-    with Pushd(f"{HOME}/.local/share/applications"):
-        for file in os.listdir("/var/lib/snapd/desktop/applications/"):
-            if not file.endswith(".desktop"):
-                continue
-            call(f"ln -s /var/lib/snapd/desktop/applications/{file} .")
+    link_snap_desktop_entries()
 
 
 @once
@@ -458,15 +474,11 @@ def first_install_mac():
     sudo()
 
     # Install homebrew
-    urlretrieve(
+    install_script(
         "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh",
-        "brew_install.sh",
+        shell="bash",
+        env={"NONINTERACTIVE": "1"},
     )
-    call(
-        "bash brew_install.sh",
-        env={**os.environ, "NONINTERACTIVE": "1"},
-    )
-    os.remove("brew_install.sh")
 
     link_configs()
     setup_shell_unix()
