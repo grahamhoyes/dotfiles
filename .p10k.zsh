@@ -144,6 +144,7 @@
     composer.json
     go.mod
     package.json
+    pyproject.toml
     stack.yaml
   )
   typeset -g POWERLEVEL9K_SHORTEN_FOLDER_MARKER="(${(j:|:)anchor_files})"
@@ -168,7 +169,7 @@
   typeset -g POWERLEVEL9K_HIDE_BRANCH_ICON=true
 
   ########################################[ kubernetes ]########################################
-  typeset -g POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND="kubectl|helm|kubens|kubectx|kk|k9s"
+  typeset -g POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND="kubectl|helm|helmfile|kubens|kubectx|kk|k9s|flux"
   typeset -g POWERLEVEL9K_KUBECONTEXT_SHOW_DEFAULT_NAMESPACE=0
   typeset -g POWERLEVEL9K_KUBECONTEXT_BACKGROUND=021
   # These docs will be helpful for deciphering the expansions below:

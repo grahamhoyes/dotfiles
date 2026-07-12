@@ -480,6 +480,17 @@ def first_install_mac():
         env={"NONINTERACTIVE": "1"},
     )
 
+    brew_to_install = [
+        "htop",
+        # Kubernetes things
+        "kubectl",
+        "derailed/k9s/k9s",
+        "fluxcd/tap/flux",
+    ]
+
+    for formula in brew_to_install:
+        call(f"brew install -y {formula}")
+
     link_configs()
     setup_shell_unix()
     install_fonts()
