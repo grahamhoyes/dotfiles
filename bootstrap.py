@@ -482,6 +482,7 @@ def first_install_mac():
 
     brew_to_install = [
         "htop",
+        "--cask programmer-dvorak",
         # Kubernetes things
         "kubectl",
         "derailed/k9s/k9s",
